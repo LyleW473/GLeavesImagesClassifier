@@ -1,18 +1,21 @@
 from os import listdir as os_listdir
-from torch import manual_seed as torch_manual_seed
 from torch import multinomial as torch_multinomial
 from torch import ones as torch_ones
 from random import shuffle as random_shuffle
+from random import seed as random_seed
 from cv2 import imread as cv2_imread
 from torch import from_numpy as torch_from_numpy
 from torch import stack as torch_stack
-from torch.cuda import is_available as torch_cuda_is_available
 
 # Note: To save memory, I am storing the names of every image in their respective type list for each split, and then when generating a batch, will convert the images into matrices
 
 class DataHandler:
 
-    def __init__(self, device = "cuda" if torch_cuda_is_available else "cpu"):
+    def __init__(self, device, generator, r_seed):
+        
+        # Re-producibility
+        self.generator = generator # Generating batches
+        random_seed(r_seed) # Shuffling dataset
         
         # Device used for computation (CPU / GPU)
         self.device = device
@@ -57,19 +60,19 @@ class DataHandler:
 
         # Choose batch_size types
         u_distrib = torch_ones(5, device = self.device) / 5 # Single vector with uniform distribution
-        type_idxs = torch_multinomial(input = u_distrib, num_samples = batch_size, replacement = True)
-
+        type_idxs = torch_multinomial(input = u_distrib, num_samples = batch_size, replacement = True, generator = self.generator)
+        
         # Choose batch_size images from the split
         n_split_images = len(image_names_split[0]) # Number of images in this split for each leaf type
         u_distrib = torch_ones(n_split_images, device = self.device) / n_split_images # Single vector with uniform distribution
-        img_idxs = torch_multinomial(input = u_distrib, num_samples = batch_size, replacement = True)
+        img_idxs = torch_multinomial(input = u_distrib, num_samples = batch_size, replacement = True, generator = self.generator)
 
         # Note: 
         # - type_idxs will contain all the types selected for this batch
         # - img_idxs will contain the image selected in each leaf type directory for each leaf type selected
 
         # Returns matrices of each image and the labels for each image
-        return self.get_matrices(t_idxs = type_idxs, i_idxs = img_idxs, image_names_split = image_names_split), type_idxs
+        return self.get_matrices(t_idxs = type_idxs, i_idxs = img_idxs, image_names_split = image_names_split).to(device = self.device), type_idxs.to(device = self.device)
 
 
     def get_matrices(self, t_idxs, i_idxs, image_names_split):
@@ -83,7 +86,7 @@ class DataHandler:
             # Name of the image in the leaf type directory
             image_name = image_names_split[type_idx][image_idx]
 
-            # Conver the image into a matrix and add it to the list
+            # Convert the image into a matrix and add it to the list
             matrices.append(self.get_image_matrix(image_name = image_name, type_name = l_type))
 
         # Convert from Python list to PyTorch tensor
@@ -105,22 +108,3 @@ class DataHandler:
 
         # No intermediaries: 
         return torch_from_numpy(cv2_imread(f"Dataset/Images/{type_name}/{image_name}")).view(3, 511, 511).float()
-    
-
-# Seed for reproducibility
-torch_manual_seed(2004)
-
-
-DH = DataHandler()
-
-train_image_names = DH.split_dataset("Train")
-val_image_names = DH.split_dataset("Val")
-test_image_names = DH.split_dataset("Test")
-
-# Note:
-# - X.shape = (batch_size, colour_channels, image_ize[0], image_size[1])
-# - Y.shape = (batch_size)
-X, Y = DH.generate_batch(30, train_image_names)
-
-print(X.shape)
-print(Y.shape)
