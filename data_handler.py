@@ -40,8 +40,8 @@ class DataHandler:
 
         n_imgs_per_type = 100 # Number of images for each type
         split_distribution = {
-                            "Train": int(0.8 * n_imgs_per_type),
-                            "Val": int(0.1 * n_imgs_per_type),
+                            "Train": int(0.7 * n_imgs_per_type),
+                            "Val": int(0.2 * n_imgs_per_type),
                             "Test": int(0.1 * n_imgs_per_type) 
                             }
 
