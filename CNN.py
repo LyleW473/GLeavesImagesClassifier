@@ -15,6 +15,7 @@ G.manual_seed(m_seed)
 DH = DataHandler(device = s_device, generator = G, r_seed = m_seed)
 
 train_image_names = DH.split_dataset("Train")
+# DH.add_DA_images(image_names_split = train_image_names)
 val_image_names = DH.split_dataset("Val")
 test_image_names = DH.split_dataset("Test")
 
@@ -49,7 +50,7 @@ model = nn.Sequential(
                     nn.BatchNorm1d(5445),
                     nn.ReLU(),
 
-                    nn.Dropout1d(p = 0.25, inplace = False),
+                    # nn.Dropout1d(p = 0.25, inplace = False),
                     nn.Linear(5445, 5)
 
                     # 2
@@ -136,8 +137,10 @@ plt.show()
 # ------------------------------------------------------------------------
 # Tests:
 
-# (batch_size = 50, epochs = 1000, lr = 0.0001) 
-# Note: Validation loss for set-up 2 increases more (set-up 1 stays at roughly the same validation loss for the entire training)
+# (batch_size = 50, epochs = 1000, lr = 0.0001)
+# Notes: 
+# - Image inputs were not normalised (pixel values between 0 and 1) and standardised (mean 0, std 1) for this test
+# - Validation loss for set-up 2 increases more (set-up 1 stays at roughly the same validation loss for the entire training)
 
 # ------------------------------------
 # 1 [without dropout layer]
@@ -165,3 +168,24 @@ plt.show()
 # Correct predictions: 11922 / 20000 | Accuracy(%): 59.61
 # Val accuracy
 # Correct predictions: 5834 / 20000 | Accuracy(%): 29.17
+
+# ------------------------------------------------------------------------
+# Standardised + normalised inputs (+ fixed bug with tensor.view())
+
+# ------------------------------------
+# 1 [without dropout layer]
+
+# Epoch: 1000 | TrainLoss: 6.035612750565633e-05 | ValLoss: 2.0396666526794434
+# Train accuracy
+# Correct predictions: 20000 / 20000 | Accuracy(%): 100.0
+# Val accuracy
+# Correct predictions: 9867 / 20000 | Accuracy(%): 49.335
+
+# ------------------------------------
+# 1 [with dropout layer (p = 0.25)]
+
+# Epoch: 1000 | TrainLoss: 0.4191969633102417 | ValLoss: 2.349715232849121
+# Train accuracy
+# Correct predictions: 15954 / 20000 | Accuracy(%): 79.77
+# Val accuracy
+# Correct predictions: 8019 / 20000 | Accuracy(%): 40.095
