@@ -92,8 +92,15 @@ class DataHandler:
             # Name of the image in the leaf type directory
             image_name = image_names_split[type_idx][image_idx]
 
-            # Convert the image into a matrix and add it to the list
-            matrices.append(self.get_image_matrix(image_name = image_name, type_name = l_type))
+            # Name of the leaf image
+            if type(image_name) == str:
+                print("GENERATE_MATRIX", type_idx, image_idx)
+                # Convert the image into a matrix and add it to the list
+                matrices.append(self.get_image_matrix(image_name = image_name, type_name = l_type))
+            else:
+                # "image_name" will already be a PyTorch tensor of the images produced through data augmentation
+                matrices.append(image_name)
+                print("TENSOR", type_idx, image_idx)
 
         # Convert from Python list to PyTorch tensor
         matrices = torch_stack(matrices, dim = 0)
@@ -101,8 +108,10 @@ class DataHandler:
         return matrices
 
     def get_image_matrix(self, image_name, type_name):
-
-        matrix_PT = torch_from_numpy(np.transpose(cv2_imread(f"Dataset/Images/{type_name}/{image_name}"), (2, 0, 1))).float().to(device = self.device)
+        
+        bgr_image = cv2_imread(f"Dataset/Images/{type_name}/{image_name}")
+        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+        matrix_PT = torch_from_numpy(np.transpose(rgb_image, (2, 0, 1))).float().to(device = self.device)
 
         # Normalise values between 0 and 1 (Transforms.ToTensor already does this)
         minimums = torch_empty(3, device = self.device)
@@ -131,83 +140,73 @@ class DataHandler:
         # Note: Adds more images into each list of the image names for each leaf type
         # - Should only add images to the training split
 
-        print(self.leaf_types)
+        
         leaf_type_paths = [f"Dataset/Images/{l_type}" for l_type in self.leaf_types]
+        print(self.leaf_types)
         print(leaf_type_paths)
 
         transformation = transforms.Compose(
                                         [
                                         transforms.ToTensor(), # Converts nd array / PIL image to PyTorch tensor and makes pixel values between 0 and 1
-                                        DynamicNormalize() # Standardises image pixels to be of mean 0, std 1
+                                        # DynamicNormalize() # Standardises image pixels to be of mean 0, std 1
                                         ]
                                         )
 
+        
         for lt_num, lt_list in enumerate(image_names_split):
-            for image_name in lt_list[:1]:
-                original = cv2_imread(f"{leaf_type_paths[lt_num]}/{image_name}")
-                # print(img_np[510][510], original[510][510])
 
-                matrix_PT = torch_from_numpy(np.transpose(original, (2, 0, 1))).float().to(device = self.device) # (Height, Width, Channels) ---> (Channels, Height, Width)
-                reverse_to_np = matrix_PT.permute(1, 2, 0) # (Channels, Height, Width) --->  (Height, Width, Channels)
-                reverse_to_np = reverse_to_np.cpu().numpy().astype(np.uint8) # Convert back to numpy array
+            print("Original length", len(lt_list))
 
-                # Checking images:
+            # Make a copy so that we only add existing images (Not the added augmented images)
+            # Note: Required so that the tensors created from data-augmentation won't be selected for the transformation
+            original_lt_list = lt_list.copy() 
 
-                # print(reverse_to_np == original, reverse_to_np.shape, reverse_to_np.dtype, original.dtype)
-                # print(reverse_to_np[510][510], original[510][510]
+            for image_name in original_lt_list:
 
-                cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
-                cv2.imshow('Original', original)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-                
-                cv2.namedWindow('After', cv2.WINDOW_NORMAL)
-                cv2.imshow('After', reverse_to_np)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                print("Name", f"{leaf_type_paths[lt_num]}/{image_name}")
 
-                # Normalise values between 0 and 1 (Transforms.ToTensor already does this)
-                minimums = torch_empty(3, device = self.device)
-                maximums = torch_empty(3, device = self.device)
-                for channel in range(3):
-                    minimums[channel] = torch_min(matrix_PT[channel])
-                    maximums[channel] = torch_max(matrix_PT[channel])
-
-                matrix_PT -= minimums[:, None, None]
-                matrix_PT /= (maximums - minimums)[:, None, None]
-                 
-                # Standardize image to make pixel values mean 0, std 1
-                # Mean + STD across the 3 RGB channels
-                mean = matrix_PT.mean(dim = (1, 2))
-                std = matrix_PT.std(dim = (1, 2))
-                # Takes away the mean / std from each RGB channel
-                matrix_PT -= mean[:, None, None] 
-                matrix_PT /= std[:, None, None]
+                # Retrive np array from the image and convert from BGR to RGB
+                bgr_image = cv2_imread(f"{leaf_type_paths[lt_num]}/{image_name}")
+                rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
 
                 # Input the np array of the image and apply the transformations
                 # Note: DA.tensor.dtype = torch.float32, DA_tensor.shape = [3, 511, 511]
-                DA_tensor = transformation(cv2_imread(f"{leaf_type_paths[lt_num]}/{image_name}")).to(device = self.device) # Returns the augmented image as a PyTorch tensor
+                DA_tensor = (transformation(rgb_image)).to(device = self.device) # Returns the augmented image as a PyTorch tensor
 
-                print(DA_tensor.shape)
-                torch_set_printoptions(threshold = 10_000) # Print entire Pytorch tensor to check for similarity
+                # Add the tensor to the list of all the possible leaf "images" to pick
+                # Note: Since these aren't image names, they will not use the "get_matrices" method, but will simply be added to the batch when "generate_batch" is called
+                lt_list.append(DA_tensor)
 
-                print(matrix_PT.device, DA_tensor.device)
-                print("M_PT")
-                print(matrix_PT[1][510])
-                print("DA")
-                print(DA_tensor[1][510])
+                # # Visualise image from the augmented tensor
+                # self.tensor_to_image(tensor = DA_tensor, original_image_path = f"{leaf_type_paths[lt_num]}/{image_name}")
 
-                print("Minimum", matrix_PT[1].min().item(), DA_tensor[1].min().item())
-                print("Type",  matrix_PT.dtype, DA_tensor.dtype)
-                # print(matrix_PT == DA_tensor)
-                # print(s.dtype, DA_tensor.dtype)
-                # print(f"{leaf_type_paths[lt_num]}/{image_name}")
+            print("New length", len(lt_list))
 
-                print("STD", matrix_PT.std(dim = (1, 2)), DA_tensor.std(dim = (1, 2)))
-                print("MEAN", matrix_PT.mean(dim = (1, 2)), DA_tensor.mean(dim = (1, 2)))
-                print("AllCloseSTD", torch_allclose(matrix_PT.std(dim = (1, 2)), DA_tensor.std(dim = (1, 2)), rtol = 1e-03, atol = 1e-08))
-                print("AllCloseMean", torch_allclose(matrix_PT.mean(dim = (1, 2)), DA_tensor.mean(dim = (1, 2)), rtol = 1e-03, atol = 1e-08))
-                print("AllCloseMatrices", torch_allclose(matrix_PT, DA_tensor, rtol = 1e-03, atol = 1e-08))
+    def tensor_to_image(self, tensor, original_image_path): 
+        # Used to visualise the images from data augmentation
+
+        original = cv2_imread(original_image_path)
+        reverse_to_np = tensor.permute(1, 2, 0) * 255 # (Channels, Height, Width) --->  (Height, Width, Channels) and scale pixel values to be from [0, 255] instead of [0, 1]
+        reverse_to_np = reverse_to_np.cpu().numpy().astype(np.uint8) # Convert back to numpy array 
+        reverse_to_np = cv2.cvtColor(reverse_to_np, cv2.COLOR_RGB2BGR) # Convert from RGB array to BGR array so that it can be visualised properly using CV2
+
+        print("DTYPE", original.dtype, reverse_to_np.dtype)
+        print("Original", original.shape)
+        print(original[250][250])
+        print("After", reverse_to_np.shape)
+        print(original[250][250])
+        print((original == reverse_to_np).all())
+
+        cv2.namedWindow('Original', cv2.WINDOW_NORMAL)
+        cv2.imshow('Original', original)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+        
+        cv2.namedWindow('After', cv2.WINDOW_NORMAL)
+        cv2.imshow('After', reverse_to_np)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
 
 class DynamicNormalize(transforms.Normalize): # Used so that the transformations don't need to be declared every time for each image (due to needing to calculate mean + std)
     def __init__(self, mean = None, std = None):

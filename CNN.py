@@ -15,7 +15,7 @@ G.manual_seed(m_seed)
 DH = DataHandler(device = s_device, generator = G, r_seed = m_seed)
 
 train_image_names = DH.split_dataset("Train")
-# DH.add_DA_images(image_names_split = train_image_names)
+DH.add_DA_images(image_names_split = train_image_names)
 val_image_names = DH.split_dataset("Val")
 test_image_names = DH.split_dataset("Test")
 
@@ -29,6 +29,10 @@ TEST_X, TEST_Y = DH.generate_batch(30, train_image_names)
 print(TEST_X.shape)
 print(TEST_Y.shape)
 
+# Check if all matrices in the batch are the same type and that labels are correct
+for matrix in TEST_X:
+    print(matrix.dtype, matrix.device, type(matrix))
+print(TEST_Y)
 
 model = nn.Sequential(
 
