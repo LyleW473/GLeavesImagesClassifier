@@ -15,9 +15,10 @@ G.manual_seed(m_seed)
 DH = DataHandler(device = s_device, generator = G, r_seed = m_seed)
 
 train_image_names = DH.split_dataset("Train")
-DH.add_DA_images(image_names_split = train_image_names)
+DH.add_DA_images(image_names_split = train_image_names, num_duplications = 10) # num_duplications = Create x duplications for each image inside the image split
 val_image_names = DH.split_dataset("Val")
 test_image_names = DH.split_dataset("Test")
+print(f"Split Lengths| Train: {len(train_image_names[0]) * 5} | Val: {len(val_image_names[0]) * 5}, Test: {len(test_image_names[0]) * 5}")
 
 # Note:
 # - TEST_X.shape = (batch_size, colour_channels, image_ize[0], image_size[1])
@@ -29,10 +30,10 @@ TEST_X, TEST_Y = DH.generate_batch(30, train_image_names)
 print(TEST_X.shape)
 print(TEST_Y.shape)
 
-# Check if all matrices in the batch are the same type and that labels are correct
-for matrix in TEST_X:
-    print(matrix.dtype, matrix.device, type(matrix))
-print(TEST_Y)
+# # Check if all matrices in the batch are the same type and that labels are correct
+# for matrix in TEST_X:
+#     print(matrix.dtype, matrix.device, type(matrix))
+# print(TEST_Y)
 
 model = nn.Sequential(
 
@@ -76,6 +77,7 @@ model = nn.Sequential(
 
 model.to(device = s_device)
 optimiser = torch.optim.AdamW(params = model.parameters(), lr = 0.0001)
+# print(torch.cuda.memory_summary()) # Check what tensors are being stored
 
 epochs = 1000
 batch_size = 50
@@ -193,3 +195,27 @@ plt.show()
 # Correct predictions: 15954 / 20000 | Accuracy(%): 79.77
 # Val accuracy
 # Correct predictions: 8019 / 20000 | Accuracy(%): 40.095
+
+
+# ------------------------------------------------------------------------
+# With images created from data augmentation (normalised + standardised inputs)
+
+# num_duplications = 10
+
+# ------------------------------------
+# 1 [without dropout layer]
+
+# Epoch: 1000 | TrainLoss: 0.0008139178389683366 | ValLoss: 1.6594018936157227
+# Train accuracy
+# Correct predictions: 20000 / 20000 | Accuracy(%): 100.0
+# Val accuracy
+# Correct predictions: 8314 / 20000 | Accuracy(%): 41.57
+
+# ------------------------------------
+# 1 [with dropout layer (p = 0.25)]
+
+# Epoch: 1000 | TrainLoss: 0.42324337363243103 | ValLoss: 2.2393290996551514
+# Train accuracy
+# Correct predictions: 15939 / 20000 | Accuracy(%): 79.69500000000001
+# Val accuracy
+# Correct predictions: 7491 / 20000 | Accuracy(%): 37.455

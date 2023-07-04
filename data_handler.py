@@ -94,13 +94,13 @@ class DataHandler:
 
             # Name of the leaf image
             if type(image_name) == str:
-                print("GENERATE_MATRIX", type_idx, image_idx)
                 # Convert the image into a matrix and add it to the list
                 matrices.append(self.get_image_matrix(image_name = image_name, type_name = l_type))
+                # print("GENERATE_MATRIX", type_idx, image_idx)
             else:
                 # "image_name" will already be a PyTorch tensor of the images produced through data augmentation
-                matrices.append(image_name)
-                print("TENSOR", type_idx, image_idx)
+                matrices.append(image_name.to(device = self.device))
+                # print("TENSOR", type_idx, image_idx)
 
         # Convert from Python list to PyTorch tensor
         matrices = torch_stack(matrices, dim = 0)
@@ -136,9 +136,9 @@ class DataHandler:
 
         return matrix_PT
     
-    def add_DA_images(self, image_names_split): # Data augmentation
+    def add_DA_images(self, image_names_split, num_duplications): # Data augmentation
         # Note: Adds more images into each list of the image names for each leaf type
-        # - Should only add images to the training split
+        # - Should only add images to the training split 
         
         leaf_type_paths = [f"Dataset/Images/{l_type}" for l_type in self.leaf_types]
         print(self.leaf_types)
@@ -170,23 +170,25 @@ class DataHandler:
             original_lt_list = lt_list.copy() 
 
             for image_name in original_lt_list:
+                
+                # print("Name", f"{leaf_type_paths[lt_num]}/{image_name}")
+                
+                for _ in range(num_duplications): # Repeats the data augmentation "num_duplication" times for each image in the split
 
-                print("Name", f"{leaf_type_paths[lt_num]}/{image_name}")
+                    # Retrieve np array from the image and convert from BGR to RGB
+                    bgr_image = cv2_imread(f"{leaf_type_paths[lt_num]}/{image_name}")
+                    rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
 
-                # Retrive np array from the image and convert from BGR to RGB
-                bgr_image = cv2_imread(f"{leaf_type_paths[lt_num]}/{image_name}")
-                rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+                    # Input the np array of the image and apply the transformations
+                    # Note: DA.tensor.dtype = torch.float32, DA_tensor.shape = [3, 511, 511]
+                    DA_tensor = (transformation(rgb_image)) # Returns the augmented image as a PyTorch tensor
 
-                # Input the np array of the image and apply the transformations
-                # Note: DA.tensor.dtype = torch.float32, DA_tensor.shape = [3, 511, 511]
-                DA_tensor = (transformation(rgb_image)).to(device = self.device) # Returns the augmented image as a PyTorch tensor
+                    # Add the tensor to the list of all the possible leaf "images" to pick
+                    # Note: Since these aren't image names, they will not use the "get_matrices" method, but will simply be added to the batch when "generate_batch" is called
+                    lt_list.append(DA_tensor)
 
-                # Add the tensor to the list of all the possible leaf "images" to pick
-                # Note: Since these aren't image names, they will not use the "get_matrices" method, but will simply be added to the batch when "generate_batch" is called
-                lt_list.append(DA_tensor)
-
-                # Visualise image from the augmented tensor
-                self.tensor_to_image(tensor = DA_tensor, original_image_path = f"{leaf_type_paths[lt_num]}/{image_name}")
+                    # # Visualise image from the augmented tensor
+                    # self.tensor_to_image(tensor = DA_tensor, original_image_path = f"{leaf_type_paths[lt_num]}/{image_name}")
 
             print("New length", len(lt_list))
 
