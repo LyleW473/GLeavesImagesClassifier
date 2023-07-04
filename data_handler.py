@@ -139,7 +139,6 @@ class DataHandler:
     def add_DA_images(self, image_names_split): # Data augmentation
         # Note: Adds more images into each list of the image names for each leaf type
         # - Should only add images to the training split
-
         
         leaf_type_paths = [f"Dataset/Images/{l_type}" for l_type in self.leaf_types]
         print(self.leaf_types)
@@ -148,7 +147,16 @@ class DataHandler:
         transformation = transforms.Compose(
                                         [
                                         transforms.ToTensor(), # Converts nd array / PIL image to PyTorch tensor and makes pixel values between 0 and 1
-                                        # DynamicNormalize() # Standardises image pixels to be of mean 0, std 1
+
+                                        # Shifts the image left / right / up / down
+                                        transforms.Resize(size = (511 + (73 * 2), 511 + (73 * 2))), # 73 = a factor of 511
+                                        transforms.RandomCrop(size = (511, 511)),
+
+                                        # Rotates image between (-x and x degrees)
+                                        transforms.RandomRotation(degrees = 30),
+
+                                        # Standardises image pixels to be of mean 0, std 1 [transforms.Normalize but takes finds the mean and std of the image inputted]
+                                        DynamicNormalize() 
                                         ]
                                         )
 
@@ -177,8 +185,8 @@ class DataHandler:
                 # Note: Since these aren't image names, they will not use the "get_matrices" method, but will simply be added to the batch when "generate_batch" is called
                 lt_list.append(DA_tensor)
 
-                # # Visualise image from the augmented tensor
-                # self.tensor_to_image(tensor = DA_tensor, original_image_path = f"{leaf_type_paths[lt_num]}/{image_name}")
+                # Visualise image from the augmented tensor
+                self.tensor_to_image(tensor = DA_tensor, original_image_path = f"{leaf_type_paths[lt_num]}/{image_name}")
 
             print("New length", len(lt_list))
 
