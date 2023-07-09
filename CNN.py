@@ -15,7 +15,7 @@ G.manual_seed(m_seed)
 DH = DataHandler(device = s_device, generator = G, r_seed = m_seed)
 
 train_image_names = DH.split_dataset("Train")
-DH.add_DA_images(image_names_split = train_image_names, num_duplications = 1) # num_duplications = Create x duplications for each image inside the image split
+DH.add_DA_images(image_names_split = train_image_names, num_duplications = 10) # num_duplications = Create x duplications for each image inside the image split
 val_image_names = DH.split_dataset("Val")
 test_image_names = DH.split_dataset("Test")
 print(f"Split Lengths| Train: {len(train_image_names[0]) * 5} | Val: {len(val_image_names[0]) * 5}, Test: {len(test_image_names[0]) * 5}")
@@ -363,3 +363,38 @@ plt.show()
 # Epoch: 3000 | TrainLoss: 0.22533057630062103 | ValLoss: 2.4722952842712402 | TrainAcc: 86.0 | ValAcc: 34.0
 # Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
 # Correct predictions: 9274 / 20000 | ValAccuracy(%): 46.3
+
+
+# ------------------------------------------------------------------------
+# Changed split distribution to: [0.6, 0.2, 0.2] (num_duplications = 10, batch_size = 50)
+
+# 1 [with dropout layer (p = 0.1)]
+
+# Epoch: 1000 | TrainLoss: 0.09960095584392548 | ValLoss: 1.7756178379058838 | TrainAcc: 94.0 | ValAcc: 50.0
+# Correct predictions: 19977 / 20000 | TrainAccuracy(%): 99.885
+# Correct predictions: 10610 / 20000 | ValAccuracy(%): 53.05
+
+# TrainCorrect: [3912, 4008, 4068, 3964, 4025]
+# TrainGenerated:[3912, 4008, 4073, 3982, 4025]
+# TrainAccuracies: [100.0, 100.0, 99.87724036336853, 99.54796584630839, 100.0]
+
+# ValCorrect: [3420, 1606, 2609, 1535, 1440]
+# ValGenerated:[4003, 4032, 3995, 3917, 4053]
+# ValAccuracies: [85.43592305770672, 39.8313492063492, 65.30663329161452, 39.18815419964258, 35.529237601776465]
+
+# ------------------------------------------------------------------------
+# Changed split distribution to: [0.7, 0.15, 0.15] (num_duplications = 10, batch_size = 50)
+
+# 1 [with dropout layer (p = 0.1)]
+
+# Epoch: 1000 | TrainLoss: 0.09772907197475433 | ValLoss: 2.0164947509765625 | TrainAcc: 94.0 | ValAcc: 48.0
+# Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
+# Correct predictions: 9019 / 20000 | ValAccuracy(%): 45.095
+
+# TrainCorrect: [3912, 4008, 4073, 3982, 4025]
+# TrainGenerated:[3912, 4008, 4073, 3982, 4025]
+# TrainAccuracies: [100.0, 100.0, 100.0, 100.0, 100.0]
+
+# ValCorrect: [2078, 1072, 2693, 1840, 1336]
+# ValGenerated:[4003, 4032, 3995, 3917, 4053]
+# ValAccuracies: [51.91106669997502, 26.58730158730159, 67.40926157697122, 46.97472555527189, 32.96323710831483]
