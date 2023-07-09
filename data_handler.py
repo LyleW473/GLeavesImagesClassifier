@@ -191,6 +191,9 @@ class DataHandler:
                     # self.tensor_to_image(tensor = DA_tensor, original_image_path = f"{leaf_type_paths[lt_num]}/{image_name}")
 
             print("New length", len(lt_list))
+            
+            # Shuffle the list after adding images
+            random_shuffle(lt_list)
 
     def tensor_to_image(self, tensor, original_image_path): 
         # Used to visualise the images from data augmentation

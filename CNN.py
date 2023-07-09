@@ -55,7 +55,7 @@ model = nn.Sequential(
                     nn.BatchNorm1d(5445),
                     nn.ReLU(),
 
-                    nn.Dropout1d(p = 0.25, inplace = False),
+                    nn.Dropout1d(p = 0.1, inplace = False),
                     nn.Linear(5445, 5)
 
                     # 2
@@ -79,7 +79,7 @@ model.to(device = s_device)
 optimiser = torch.optim.AdamW(params = model.parameters(), lr = 0.0001)
 # print(torch.cuda.memory_summary()) # Check what tensors are being stored
 
-epochs = 1000
+epochs = 3000
 batch_size = 50
 
 losses_i = []
@@ -290,7 +290,7 @@ plt.show()
 # Val accuracy
 # Correct predictions: 7491 / 20000 | Accuracy(%): 37.455
 
-# ------------------------------------
+# ------------------------------------------------------------------------
 # (Alternating between train and evaluation mode when finding accuracy and evaluation mode after training)
 
 # 1 [without dropout layer]
@@ -305,3 +305,40 @@ plt.show()
 # Epoch: 1000 | TrainLoss: 0.40037113428115845 | ValLoss: 1.6299127340316772 | TrainAcc: 82.0 | ValAcc: 44.0
 # Correct predictions: 19932 / 20000 | TrainAccuracy(%): 99.66000000000001
 # Correct predictions: 8799 / 20000 | ValAccuracy(%): 43.995
+
+# + (Shuffled each list after adding images from data augmentation)
+
+# ------------------------------------
+# 1 [without dropout layer]
+
+# Epoch: 1000 | TrainLoss: 0.000957684766035527 | ValLoss: 1.6948890686035156 | TrainAcc: 100.0 | ValAcc: 57.99999999999999
+# Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
+# Correct predictions: 9828 / 20000 | ValAccuracy(%): 49.14
+
+# Epoch: 3000 | TrainLoss: 0.0002263062197016552 | ValLoss: 2.87349271774292 | TrainAcc: 100.0 | ValAcc: 34.0
+# Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
+# Correct predictions: 9272 / 20000 | ValAccuracy(%): 46.36
+
+
+# ------------------------------------
+# 1 [with dropout layer (p = 0.25)]
+
+# Epoch: 1000 | TrainLoss: 0.3878507912158966 | ValLoss: 1.4953268766403198 | TrainAcc: 82.0 | ValAcc: 54.0
+# Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
+# Correct predictions: 9634 / 20000 | ValAccuracy(%): 48.17
+
+# Epoch: 3000 | TrainLoss: 0.3862666189670563 | ValLoss: 2.425055503845215 | TrainAcc: 76.0 | ValAcc: 34.0
+# Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
+# Correct predictions: 9316 / 20000 | ValAccuracy(%): 46.58
+
+
+# ------------------------------------
+# 1 [with dropout layer (p = 0.1)]
+
+# Epoch: 1000 | TrainLoss: 0.09772449731826782 | ValLoss: 1.541168212890625 | TrainAcc: 94.0 | ValAcc: 62.0
+# Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
+# Correct predictions: 9822 / 20000 | ValAccuracy(%): 49.11
+
+# Epoch: 3000 | TrainLoss: 0.22533057630062103 | ValLoss: 2.4722952842712402 | TrainAcc: 86.0 | ValAcc: 34.0
+# Correct predictions: 20000 / 20000 | TrainAccuracy(%): 100.0
+# Correct predictions: 9274 / 20000 | ValAccuracy(%): 46.3
