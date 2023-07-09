@@ -15,7 +15,7 @@ G.manual_seed(m_seed)
 DH = DataHandler(device = s_device, generator = G, r_seed = m_seed)
 
 train_image_names = DH.split_dataset("Train")
-DH.add_DA_images(image_names_split = train_image_names, num_duplications = 10) # num_duplications = Create x duplications for each image inside the image split
+DH.add_DA_images(image_names_split = train_image_names, num_duplications = 1) # num_duplications = Create x duplications for each image inside the image split
 val_image_names = DH.split_dataset("Val")
 test_image_names = DH.split_dataset("Test")
 print(f"Split Lengths| Train: {len(train_image_names[0]) * 5} | Val: {len(val_image_names[0]) * 5}, Test: {len(test_image_names[0]) * 5}")
@@ -79,7 +79,7 @@ model.to(device = s_device)
 optimiser = torch.optim.AdamW(params = model.parameters(), lr = 0.0001)
 # print(torch.cuda.memory_summary()) # Check what tensors are being stored
 
-epochs = 3000
+epochs = 1000
 batch_size = 50
 
 losses_i = []
@@ -176,36 +176,57 @@ plt.show()
 # Plotting accuracies after training
 print("-----------------------------------------------------------------")
 print("Accuracy after training")
+# Note: Abbreviations: os = over steps, pt = per type
 accuracy_steps = 1000
 accuracy_bs = 20
 C = 20
 CHECK_INTERVAL = 50
-train_accuracies = evaluate_accuracy(
-                                    steps = accuracy_steps, 
-                                    batch_size = accuracy_bs, 
-                                    generate_batch_f = DH.generate_batch, 
-                                    model = model, 
-                                    image_names_split = train_image_names, 
-                                    split_name = "Train",
-                                    check_interval = CHECK_INTERVAL
-                                    )
-                                    
-val_accuracies = evaluate_accuracy(
-                                    steps = accuracy_steps, 
-                                    batch_size = accuracy_bs, 
-                                    generate_batch_f = DH.generate_batch, 
-                                    model = model, 
-                                    image_names_split = val_image_names, 
-                                    split_name = "Val",
-                                    check_interval = CHECK_INTERVAL
-                                    )
+train_accuracies_os, tra_accuracies_pt = evaluate_accuracy(
+                                                        steps = accuracy_steps, 
+                                                        batch_size = accuracy_bs, 
+                                                        generate_batch_f = DH.generate_batch, 
+                                                        model = model, 
+                                                        image_names_split = train_image_names, 
+                                                        split_name = "Train",
+                                                        check_interval = CHECK_INTERVAL
+                                                        )
 
-train_accuracies = torch.tensor(train_accuracies).view(-1, C).mean(1)
-val_accuracies = torch.tensor(val_accuracies).view(-1, C).mean(1)
+tra_correct = [tra_accuracies_pt[i][0] for i in range(5)] # Number of correct predictions for each type
+tra_generated = [tra_accuracies_pt[i][1] for i in range(5)] # Number of examples generated for each type
+tra_accuracies = [(n_correct / n_generated) * 100 for n_correct, n_generated in zip(tra_correct, tra_generated)] # Accuracy
+
+                                    
+val_accuracies_os, val_accuracies_pt = evaluate_accuracy(
+                                                    steps = accuracy_steps, 
+                                                    batch_size = accuracy_bs, 
+                                                    generate_batch_f = DH.generate_batch, 
+                                                    model = model, 
+                                                    image_names_split = val_image_names, 
+                                                    split_name = "Val",
+                                                    check_interval = CHECK_INTERVAL
+                                                    )
+
+val_correct = [val_accuracies_pt[i][0] for i in range(5)] # Number of correct predictions for each type
+val_generated = [val_accuracies_pt[i][1] for i in range(5)] # Number of examples generated for each type
+val_accuracies = [(n_correct / n_generated) * 100 for n_correct, n_generated in zip(val_correct, val_generated)] # Accuracy
+
+print("-----------------------------------------------------------------")
+print(f"LeafTypes: {DH.leaf_types}")
+
+print(f"TrainCorrect: {tra_correct}")
+print(f"TrainGenerated:{tra_generated}")
+print(f"TrainAccuracies: {tra_accuracies}")
+
+print(f"ValCorrect: {val_correct}")
+print(f"ValGenerated:{val_generated}")
+print(f"ValAccuracies: {val_accuracies}")
+
+train_accuracies_os = torch.tensor(train_accuracies_os).view(-1, C).mean(1)
+val_accuracies_os = torch.tensor(val_accuracies_os).view(-1, C).mean(1)
 
 fig, ax = plt.subplots()
-ax.plot([i for i in range(int(accuracy_steps / C))], train_accuracies, label = "Train")
-ax.plot([i for i in range(int(accuracy_steps / C))], val_accuracies, label = "Validation")
+ax.plot([i for i in range(int(accuracy_steps / C))], train_accuracies_os, label = "Train")
+ax.plot([i for i in range(int(accuracy_steps / C))], val_accuracies_os, label = "Validation")
 ax.legend()
 
 plt.show()
